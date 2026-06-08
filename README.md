@@ -57,10 +57,26 @@ Le bouton « Imprimer / Exporter en PDF » de l'étape 5 produit un rapport prop
 > ⚖️ Outil d'aide à la décision. Les résultats sont indicatifs et ne se
 > substituent pas à l'avis d'un expert-comptable ou d'un commissaire à l'évaluation.
 
+## 📱 Application mobile (PWA)
+
+L'application est une **PWA installable** : une fois ouverte sur le téléphone,
+on peut l'ajouter à l'écran d'accueil (iOS : *Partager → Sur l'écran d'accueil* ;
+Android : *menu → Ajouter à l'écran d'accueil*) et l'utiliser **en plein écran,
+comme une vraie appli, y compris hors ligne** (service worker `sw.js`).
+
+Optimisations mobiles intégrées : claviers numériques (`inputmode`), champs à
+16 px (pas de zoom intempestif sur iOS), cibles tactiles agrandies, gestion des
+encoches (safe-area), icônes 🍦 et manifest (`manifest.webmanifest`).
+
 ## 📁 Structure
 
 ```
-index.html   Interface (HTML + Tailwind CDN)
-app.js       Moteur de calcul et UI (JavaScript modulaire, commenté en français)
-README.md    Ce fichier
+index.html             Interface (HTML + Tailwind CDN) + métadonnées PWA
+app.js                 Moteur de calcul et UI (JS modulaire, commenté en français)
+sw.js                  Service worker (mode hors ligne)
+manifest.webmanifest   Manifeste PWA (installation mobile)
+icon-*.png             Icônes de l'application 🍦
+apple-touch-icon.png   Icône écran d'accueil iOS
+favicon-32.png         Favicon
+README.md              Ce fichier
 ```

@@ -2,8 +2,24 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- viewport-fit=cover : prise en charge des encoches (iPhone) ; le zoom reste autorisé (accessibilité) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Évaluateur de Fonds de Commerce — Glacier Artisanal</title>
+
+  <!-- ============================================================= -->
+  <!--  PWA : installation sur mobile + mode hors ligne               -->
+  <!-- ============================================================= -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#184e75" />
+  <meta name="description" content="Estimation experte de la valeur d'un glacier artisanal multi-sites (laboratoire, boutique, réserve, kiosque AOT)." />
+  <!-- Icônes -->
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <!-- iOS : ouverture en plein écran depuis l'écran d'accueil -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Éval Glacier" />
 
   <!-- ============================================================= -->
   <!--  Tailwind CSS via CDN (aucune installation requise)            -->
@@ -43,6 +59,13 @@
        ===================================================================== */
     .hidden    { display: none !important; }
     .invisible { visibility: hidden !important; }
+
+    /* ---- Confort mobile : encoches (safe-area) et zone tactile ---- */
+    body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+    @media (max-width: 640px) {
+      /* Cibles tactiles plus grandes au doigt */
+      .champ, select.champ, input.champ { min-height: 44px; }
+    }
 
     /* ---- Infobulles personnalisées (terme technique + icône ?) ---- */
     .infobulle { position: relative; display: inline-flex; cursor: help; }
@@ -193,7 +216,7 @@
                 <span class="bulle">EBE retraité : on réintègre une rémunération « excessive » du dirigeant, ou des charges non récurrentes, pour refléter la vraie capacité bénéficiaire. Laissez 0 si non concerné.</span>
               </span>
             </label>
-            <input type="number" id="retraitement-ebe" min="0" step="1000" placeholder="0"
+            <input type="number" inputmode="numeric" id="retraitement-ebe" min="0" step="1000" placeholder="0"
                    class="champ w-full">
             <p class="text-xs text-slate-500 mt-1">€/an, ajouté à l'EBE moyen.</p>
           </div>
@@ -258,7 +281,7 @@
                 <span class="bulle">Mix à glace, poudres, purées de fruits, sucres, cornets, pots, packaging, petits consommables.</span>
               </span>
             </label>
-            <input type="number" id="stock-mp" min="0" step="100" placeholder="0" class="champ w-full text-lg">
+            <input type="number" inputmode="numeric" id="stock-mp" min="0" step="100" placeholder="0" class="champ w-full text-lg">
           </div>
           <div class="bg-glace-100 rounded-xl p-5">
             <label class="flex items-center gap-1 font-semibold text-slate-700 mb-2">
@@ -267,7 +290,7 @@
                 <span class="bulle">Bacs de glace et sorbets déjà fabriqués, stockés en réserve négative, valorisés au coût de production / prix d'achat des matières.</span>
               </span>
             </label>
-            <input type="number" id="stock-pf" min="0" step="100" placeholder="0" class="champ w-full text-lg">
+            <input type="number" inputmode="numeric" id="stock-pf" min="0" step="100" placeholder="0" class="champ w-full text-lg">
           </div>
         </div>
 
@@ -317,5 +340,18 @@
   <!--  MOTEUR DE CALCUL & INTERFACE (JavaScript modulaire)          -->
   <!-- ============================================================= -->
   <script src="app.js"></script>
+
+  <!-- ============================================================= -->
+  <!--  Enregistrement du Service Worker (mode hors ligne / PWA)     -->
+  <!--  Échoue silencieusement en local (file://) : sans effet sur   -->
+  <!--  le fonctionnement de l'application.                          -->
+  <!-- ============================================================= -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => { /* hors ligne / file:// : ignoré */ });
+      });
+    }
+  </script>
 </body>
 </html>

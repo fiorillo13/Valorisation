@@ -362,7 +362,7 @@ const UI = {
         </select>
 
         <label class="block text-xs font-medium text-slate-500 mb-1">Loyer annuel (€)</label>
-        <input type="number" min="0" step="500" value="${s.loyer || ''}" placeholder="0"
+        <input type="number" inputmode="numeric" min="0" step="500" value="${s.loyer || ''}" placeholder="0"
                data-site="${def.id}" data-champ="loyer" class="champ w-full mb-3">
 
         <label class="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1">
@@ -411,7 +411,7 @@ const UI = {
         </td>
         ${[0, 1, 2].map(i => `
           <td class="px-1 py-1">
-            <input type="number" step="1000" value="${vals[i] || ''}" placeholder="0"
+            <input type="number" inputmode="numeric" step="1000" value="${vals[i] || ''}" placeholder="0"
                    data-fin="${l.cle}" data-an="${i}" class="champ w-full text-right">
           </td>`).join('')}`;
       corps.appendChild(tr);
@@ -472,7 +472,7 @@ const UI = {
           </select>
         </td>
         <td class="px-2">
-          <input type="number" min="0" step="500" value="${m.prixNeuf || ''}" placeholder="0"
+          <input type="number" inputmode="numeric" min="0" step="500" value="${m.prixNeuf || ''}" placeholder="0"
                  data-mat="${idx}" data-champ="prixNeuf" class="champ w-28 text-right">
         </td>
         <td class="px-2">
@@ -648,7 +648,8 @@ const UI = {
     // Style commun des champs (injecté pour rester DRY)
     const styleChamps = document.createElement('style');
     styleChamps.textContent =
-      '.champ{border:1px solid #cbd5e1;border-radius:.5rem;padding:.5rem .65rem;font-size:.875rem;background:#fff;outline:none}' +
+      // font-size 16px : empêche le zoom automatique d'iOS au focus d'un champ.
+      '.champ{border:1px solid #cbd5e1;border-radius:.5rem;padding:.5rem .65rem;font-size:16px;background:#fff;outline:none}' +
       '.champ:focus{border-color:#1e6091;box-shadow:0 0 0 3px rgba(30,96,145,.15)}';
     document.head.appendChild(styleChamps);
 
