@@ -129,10 +129,30 @@ const Etat = {
 
   data: null,
 
+  // Fusion profonde d'une saisie chargée sur la structure par défaut.
+  // Garantit que toutes les clés attendues existent (robustesse face aux
+  // fichiers partiels, anciens ou édités à la main) → évite tout plantage.
+  fusionner(base, charge) {
+    if (!charge || typeof charge !== 'object') return base;
+    const out = Object.assign({}, base);
+    out.exclureKiosque = !!charge.exclureKiosque;
+    out.etapeCourante = Number.isInteger(charge.etapeCourante) ? charge.etapeCourante : base.etapeCourante;
+    // Sites : on fusionne site par site, en conservant ceux d'origine
+    out.sites = {};
+    Object.keys(base.sites).forEach(id => {
+      out.sites[id] = Object.assign({}, base.sites[id], (charge.sites && charge.sites[id]) || {});
+    });
+    out.finances = Object.assign({}, base.finances, charge.finances || {});
+    out.stock = Object.assign({}, base.stock, charge.stock || {});
+    out.materiel = Array.isArray(charge.materiel) ? charge.materiel : base.materiel;
+    if (charge.majLe) out.majLe = charge.majLe;
+    return out;
+  },
+
   charger() {
     try {
       const brut = localStorage.getItem(this.cle);
-      this.data = brut ? Object.assign(this.defaut(), JSON.parse(brut)) : this.defaut();
+      this.data = brut ? this.fusionner(this.defaut(), JSON.parse(brut)) : this.defaut();
     } catch (e) {
       console.warn('Lecture localStorage impossible, état par défaut utilisé.', e);
       this.data = this.defaut();
@@ -141,8 +161,12 @@ const Etat = {
   },
 
   sauver() {
-    try { localStorage.setItem(this.cle, JSON.stringify(this.data)); }
-    catch (e) { /* mode privé : on ignore silencieusement */ }
+    try {
+      this.data.majLe = Date.now();                       // horodatage de la dernière saisie
+      localStorage.setItem(this.cle, JSON.stringify(this.data));
+    } catch (e) { /* mode privé : on ignore silencieusement */ }
+    // Hook facultatif (mise à jour de l'indicateur « enregistré automatiquement »)
+    if (typeof this.onSauver === 'function') this.onSauver();
   },
 
   reset() {
@@ -302,6 +326,79 @@ const Calculs = {
 const euro = n => (Math.round(Number(n) || 0)).toLocaleString('fr-FR') + ' €';
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
+// Complète un nombre à deux chiffres (pour les dates de fichier)
+const pad2 = n => String(n).padStart(2, '0');
+
+/* =============================================================================
+ *  Notifications éphémères (toasts)
+ * ========================================================================== */
+const Toast = {
+  afficher(message, type = 'info', duree = 3500) {
+    const conteneur = $('#toasts');
+    if (!conteneur) return;
+    const couleurs = { succes: 'bg-menthe-600', erreur: 'bg-framboise-600', info: 'bg-marine-700' };
+    const el = document.createElement('div');
+    el.className = `${couleurs[type] || couleurs.info} text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-lg max-w-[90vw] text-center`;
+    el.textContent = message;
+    conteneur.appendChild(el);
+    setTimeout(() => {
+      el.style.transition = 'opacity .3s';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 300);
+    }, duree);
+  },
+};
+
+/* =============================================================================
+ *  Sauvegarde — Export / Import de la saisie dans un fichier portable
+ *  Permet d'enregistrer son dossier à tout moment, d'en garder une copie et
+ *  de le reprendre plus tard, y compris sur un autre appareil.
+ * ========================================================================== */
+const Sauvegarde = {
+  cleFlash: 'eval-glacier-flash',   // message affiché après le rechargement post-import
+
+  // Télécharge l'état courant dans un fichier .json daté
+  exporter() {
+    try {
+      const contenu = JSON.stringify(Etat.data, null, 2);
+      const blob = new Blob([contenu], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const d = new Date();
+      const nom = `evaluation-glacier-${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}.json`;
+      const a = document.createElement('a');
+      a.href = url; a.download = nom;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      Toast.afficher('💾 Sauvegarde téléchargée : ' + nom, 'succes', 4500);
+    } catch (e) {
+      Toast.afficher("❌ Impossible de générer la sauvegarde.", 'erreur');
+    }
+  },
+
+  // Recharge la saisie depuis un fichier choisi par l'utilisateur
+  importer(fichier) {
+    const lecteur = new FileReader();
+    lecteur.onload = () => {
+      try {
+        const obj = JSON.parse(lecteur.result);
+        // Validation minimale : on s'assure que c'est bien une sauvegarde de l'outil
+        if (!obj || typeof obj !== 'object' || !obj.finances || !obj.sites) {
+          throw new Error('format invalide');
+        }
+        // Fusion profonde avec la structure par défaut (robustesse / compat versions)
+        Etat.data = Etat.fusionner(Etat.defaut(), obj);
+        Etat.sauver();
+        // On signale la réussite après le rechargement (repart sur une UI propre)
+        try { localStorage.setItem(this.cleFlash, '📂 Saisie reprise avec succès.'); } catch (e) {}
+        location.reload();
+      } catch (e) {
+        Toast.afficher("❌ Fichier invalide : ce n'est pas une sauvegarde de l'évaluateur.", 'erreur', 5000);
+      }
+    };
+    lecteur.onerror = () => Toast.afficher('❌ Lecture du fichier impossible.', 'erreur');
+    lecteur.readAsText(fichier);
+  },
+};
 
 const UI = {
 
@@ -643,6 +740,14 @@ const UI = {
       </p>`;
   },
 
+  /* ---- Indicateur « enregistré automatiquement » ------------------------- */
+  majIndicateurSauvegarde() {
+    const el = $('#autosave-indic');
+    if (!el) return;
+    const heure = new Date().toLocaleTimeString('fr-FR');
+    el.textContent = `Enregistré automatiquement sur cet appareil à ${heure}.`;
+  },
+
   /* ---- Initialisation globale de l'interface ----------------------------- */
   init() {
     // Style commun des champs (injecté pour rester DRY)
@@ -668,11 +773,23 @@ const UI = {
     $('#btn-add-materiel').addEventListener('click', () => this.ajouterMateriel());
     $('#btn-print').addEventListener('click', () => window.print());
     $('#btn-reset').addEventListener('click', () => {
-      if (confirm('Effacer toutes les données saisies et repartir de zéro ?')) {
+      if (confirm('Effacer toutes les données saisies et repartir de zéro ?\n\nAstuce : utilisez d\'abord « Enregistrer » pour conserver une copie.')) {
         Etat.reset();
         location.reload();
       }
     });
+
+    // Sauvegarde / reprise (export et import d'un fichier portable)
+    $('#btn-save').addEventListener('click', () => Sauvegarde.exporter());
+    $('#btn-load').addEventListener('click', () => $('#input-load').click());
+    $('#input-load').addEventListener('change', (e) => {
+      const fichier = e.target.files && e.target.files[0];
+      if (fichier) Sauvegarde.importer(fichier);
+      e.target.value = ''; // autorise la réimportation du même fichier ensuite
+    });
+
+    // Indicateur d'enregistrement automatique (mis à jour à chaque sauvegarde)
+    Etat.onSauver = () => this.majIndicateurSauvegarde();
 
     // Rendu initial de toutes les sections
     this.rendreSites();
@@ -689,4 +806,12 @@ const UI = {
 document.addEventListener('DOMContentLoaded', () => {
   Etat.charger();
   UI.init();
+  // Message de confirmation éventuel après une reprise (rechargement post-import)
+  try {
+    const flash = localStorage.getItem(Sauvegarde.cleFlash);
+    if (flash) {
+      localStorage.removeItem(Sauvegarde.cleFlash);
+      Toast.afficher(flash, 'succes', 4000);
+    }
+  } catch (e) { /* localStorage indisponible : sans effet */ }
 });

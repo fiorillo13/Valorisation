@@ -100,7 +100,7 @@
   <!--  EN-TÊTE                                                       -->
   <!-- ============================================================= -->
   <header class="no-print bg-marine-700 text-white shadow-lg">
-    <div class="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between gap-4">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4 flex-wrap">
       <div class="flex items-center gap-3">
         <span class="text-3xl">🍦</span>
         <div>
@@ -108,11 +108,39 @@
           <p class="text-marine-100 text-xs sm:text-sm">Glacier artisanal multi-sites — Rapport d'expert</p>
         </div>
       </div>
-      <button id="btn-reset" class="text-marine-100 hover:text-white text-sm underline underline-offset-2">
-        Réinitialiser
-      </button>
+
+      <!-- Barre d'outils : sauvegarde / reprise -->
+      <div class="flex items-center gap-2">
+        <button id="btn-save"
+                class="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold px-3 py-2 rounded-lg"
+                title="Télécharger ma saisie dans un fichier de sauvegarde">
+          💾 <span>Enregistrer</span>
+        </button>
+        <button id="btn-load"
+                class="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold px-3 py-2 rounded-lg"
+                title="Reprendre une saisie depuis un fichier de sauvegarde">
+          📂 <span>Reprendre</span>
+        </button>
+        <input type="file" id="input-load" accept="application/json,.json" class="hidden">
+        <button id="btn-reset"
+                class="text-marine-100 hover:text-white text-sm px-2 py-2 rounded-lg hover:bg-white/10"
+                title="Tout effacer et repartir de zéro">
+          ↺
+        </button>
+      </div>
+    </div>
+
+    <!-- Indicateur d'enregistrement automatique -->
+    <div class="bg-marine-800/60">
+      <div class="max-w-5xl mx-auto px-4 py-1.5 text-[11px] text-marine-100 flex items-center gap-1.5">
+        <span class="inline-block w-1.5 h-1.5 rounded-full bg-menthe-500"></span>
+        <span id="autosave-indic">Enregistrement automatique activé — votre saisie est conservée sur cet appareil.</span>
+      </div>
     </div>
   </header>
+
+  <!-- Conteneur des notifications éphémères (toasts) -->
+  <div id="toasts" class="no-print fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2"></div>
 
   <!-- ============================================================= -->
   <!--  BANDEAU GLOBAL : Switch d'exclusion du Kiosque                -->

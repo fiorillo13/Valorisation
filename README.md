@@ -57,6 +57,19 @@ Le bouton « Imprimer / Exporter en PDF » de l'étape 5 produit un rapport prop
 > ⚖️ Outil d'aide à la décision. Les résultats sont indicatifs et ne se
 > substituent pas à l'avis d'un expert-comptable ou d'un commissaire à l'évaluation.
 
+## 💾 Enregistrer et reprendre sa saisie
+
+- **Enregistrement automatique** : la saisie est conservée en continu sur
+  l'appareil (un indicateur l'affiche). En rouvrant l'app sur le même
+  navigateur, tout est repris automatiquement.
+- **💾 Enregistrer** : télécharge un fichier de sauvegarde `.json` daté
+  (copie de sécurité, archivage, ou transfert vers un autre appareil).
+- **📂 Reprendre** : recharge un fichier de sauvegarde pour continuer la saisie,
+  y compris **sur un autre téléphone ou ordinateur**.
+
+La reprise est robuste : un fichier partiel ou plus ancien est fusionné avec la
+structure par défaut, sans perte ni plantage.
+
 ## 📱 Application mobile (PWA)
 
 L'application est une **PWA installable** : une fois ouverte sur le téléphone,
