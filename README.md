@@ -37,7 +37,12 @@ mémorisées localement (localStorage) entre deux sessions.
   produisant une prime/décote argumentée sur la valeur finale.
 - **Cession & net vendeur** — passage valeur d'entreprise → valeur des titres
   (+ trésorerie − dette nette), provision de renouvellement du matériel en fin
-  de vie, droits d'enregistrement et régimes d'exonération de plus-value.
+  de vie, droits d'enregistrement, **estimation de la plus-value et du net
+  vendeur** (valeur d'origine, taux d'imposition, régimes d'exonération :
+  238 quindecies, départ retraite, seuil de recettes).
+- **Pondération ajustable** — curseurs pour régler le poids des 3 méthodes
+  (CA / Rentabilité / Patrimoniale) selon la fiabilité des données ; total
+  normalisé automatiquement à 100 %.
 
 ## ⚠️ Option « Exclure le Kiosque »
 

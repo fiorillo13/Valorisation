@@ -468,6 +468,40 @@
             </label>
             <input type="number" inputmode="numeric" id="cess-dette" min="0" step="1000" placeholder="0" class="champ w-full">
           </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1">Valeur d'origine du fonds / des titres (€)
+              <span class="infobulle text-slate-400">ⓘ<span class="bulle">Prix auquel vous avez acquis (ou créé) le fonds ou les titres. Sert à estimer la plus-value imposable = prix de cession − valeur d'origine. Laissez 0 si fonds créé sans coût d'acquisition.</span></span>
+            </label>
+            <input type="number" inputmode="numeric" id="cess-origine" min="0" step="1000" placeholder="0" class="champ w-full">
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1">Taux d'imposition de la plus-value (%)
+              <span class="infobulle text-slate-400">ⓘ<span class="bulle">Taux appliqué à la part imposable de la plus-value. Par défaut 30 % (flat tax / PFU : 12,8 % d'impôt + 17,2 % de prélèvements sociaux). Ajustez selon votre régime.</span></span>
+            </label>
+            <input type="number" inputmode="numeric" id="cess-taux" min="0" max="60" step="1" placeholder="30" class="champ w-full">
+          </div>
+        </div>
+
+        <!-- Pondération ajustable des 3 méthodes d'évaluation -->
+        <div class="mt-5 pt-5 border-t border-slate-100">
+          <p class="text-sm font-semibold text-marine-800 mb-3 flex items-center gap-1">⚖️ Pondération des 3 méthodes
+            <span class="infobulle text-marine-600">ⓘ<span class="bulle">Le poids de chaque méthode dans la valeur médiane. Un expert pondère selon la fiabilité des données : plus de poids à la rentabilité si la comptabilité est fiable, au patrimonial si l'actif domine. Les poids sont automatiquement ramenés à 100 %.</span></span>
+          </p>
+          <div id="bloc-ponderation" class="grid sm:grid-cols-3 gap-4">
+            <div>
+              <label class="text-xs font-medium text-slate-500 flex justify-between">Chiffre d'affaires <span id="pond-ca-val" class="font-bold text-marine-700">30 %</span></label>
+              <input type="range" id="pond-ca" min="0" max="100" step="5" value="30" class="w-full accent-marine-600">
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 flex justify-between">Rentabilité <span id="pond-renta-val" class="font-bold text-marine-700">40 %</span></label>
+              <input type="range" id="pond-renta" min="0" max="100" step="5" value="40" class="w-full accent-marine-600">
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 flex justify-between">Patrimoniale <span id="pond-patri-val" class="font-bold text-marine-700">30 %</span></label>
+              <input type="range" id="pond-patri" min="0" max="100" step="5" value="30" class="w-full accent-marine-600">
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-2">Total normalisé à 100 % automatiquement.</p>
         </div>
       </div>
 

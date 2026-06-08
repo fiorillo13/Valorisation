@@ -239,7 +239,12 @@ const Etat = {
         tresorerie: 0,          // trésorerie disponible (cession de titres)
         detteNette: 0,          // emprunts / crédit-bail restant dû
         regimeExo: 'aucun',
+        valeurOrigine: 0,       // prix d'acquisition / valeur d'origine du fonds (ou des titres)
+        tauxImpot: 30,          // taux d'imposition de la plus-value (% — PFU 30 % par défaut)
       },
+
+      // --- Pondération ajustable des 3 méthodes (par défaut depuis CONFIG) ---
+      ponderation: Object.assign({}, CONFIG.ponderation),
     };
   },
 
@@ -264,6 +269,7 @@ const Etat = {
     out.retraitements = Object.assign({}, base.retraitements, charge.retraitements || {});
     out.survaleur = Object.assign({}, base.survaleur, charge.survaleur || {});
     out.cession = Object.assign({}, base.cession, charge.cession || {});
+    out.ponderation = Object.assign({}, base.ponderation, charge.ponderation || {});
     if (charge.majLe) out.majLe = charge.majLe;
     return out;
   },
@@ -492,12 +498,24 @@ const Calculs = {
     return { pct, points, lignes };
   },
 
+  /* Pondération normalisée des 3 méthodes (ajustable par l'utilisateur).
+   * Les poids sont ramenés à une somme de 1 ; repli sur CONFIG si tout est nul. */
+  ponderationNorm() {
+    const p = Etat.data.ponderation || CONFIG.ponderation;
+    let ca = Math.max(0, Number(p.ca) || 0);
+    let re = Math.max(0, Number(p.rentabilite) || 0);
+    let pa = Math.max(0, Number(p.patrimoniale) || 0);
+    const s = ca + re + pa;
+    if (s <= 0) return Object.assign({}, CONFIG.ponderation);
+    return { ca: ca / s, rentabilite: re / s, patrimoniale: pa / s };
+  },
+
   /* --- SYNTHÈSE : 3 méthodes + survaleur + fourchette pondérée ------------- */
   synthese(exclureK) {
     const ca = this.valeurParCA(exclureK);
     const renta = this.valeurParRentabilite(exclureK);
     const patri = this.valeurPatrimoniale(exclureK);
-    const p = CONFIG.ponderation;
+    const p = this.ponderationNorm();
 
     const medianeBrute = ca * p.ca + renta * p.rentabilite + patri * p.patrimoniale;
     const survaleurPct = this.survaleurDetail().pct;        // prime/décote incorporelle
@@ -528,9 +546,25 @@ const Calculs = {
     }, 0);
   },
 
+  /* Fraction de la plus-value EXONÉRÉE selon le régime retenu.
+   *  - art238 (238 quindecies) : selon la valeur du fonds (≤300k total, dégressif jusqu'à 500k)
+   *  - art151septies          : selon les recettes/CA (≤250k total, dégressif jusqu'à 350k)
+   *  Renvoie un coefficient ∈ [0 ; 1]. (Le régime « retraite » est traité à part.) */
+  fractionExoneree(regime, valeurFonds, caGlobal) {
+    const palier = (v, plein, partiel) => {
+      if (v <= plein) return 1;
+      if (v >= partiel) return 0;
+      return (partiel - v) / (partiel - plein);
+    };
+    if (regime === 'art238') return palier(valeurFonds, 300000, 500000);
+    if (regime === 'art151septies') return palier(caGlobal, 250000, 350000);
+    return 0; // 'aucun' (le régime 'retraite' est géré dans impotPlusValue)
+  },
+
   /* --- MODULE 4 : Cession & net vendeur ------------------------------------
    *  Passage de la valeur de référence (médiane) au prix selon le type de
-   *  cession, après provision de renouvellement, + droits d'enregistrement. */
+   *  cession, après provision de renouvellement, droits d'enregistrement,
+   *  puis estimation de la plus-value imposable et du net vendeur. */
   cession(exclureK) {
     const c = Etat.data.cession;
     const reference = this.synthese(exclureK).mediane;
@@ -546,10 +580,27 @@ const Calculs = {
     const droits = this.droitsEnregistrement(valeurFonds); // assis sur le fonds
     const stock = this.valeurStock();                       // facturé en sus
 
+    // --- Estimation de la plus-value et du net vendeur ---
+    const taux = (Number(c.tauxImpot) || 0) / 100;
+    const plusValue = Math.max(0, prix - (Number(c.valeurOrigine) || 0));
+    const caGlobal = this.caMoyens().caGlobal;
+    let fractionExo, impot;
+    if (c.regimeExo === 'retraite') {
+      // 151 septies A : exonération de l'IR, mais prélèvements sociaux (17,2 %) dus
+      fractionExo = Math.max(0, 1 - 0.172 / (taux || 1));
+      impot = plusValue * 0.172;
+    } else {
+      fractionExo = this.fractionExoneree(c.regimeExo, valeurFonds, caGlobal);
+      impot = plusValue * (1 - fractionExo) * taux;
+    }
+    const netVendeur = prix - impot; // hors stock (remboursé en sus, sans plus-value)
+
     return {
       type: c.type, reference, provision, valeurFonds, valeurTitres,
       prix, droits, stock, regimeExo: c.regimeExo,
       exoTexte: CONFIG.regimesExoneration[c.regimeExo] || '',
+      valeurOrigine: Number(c.valeurOrigine) || 0,
+      plusValue, fractionExo, impot, netVendeur, taux,
     };
   },
 };
@@ -1009,7 +1060,37 @@ const UI = {
     $('#cess-dette').value = c.detteNette || '';
     $('#cess-dette').addEventListener('input', e => { c.detteNette = Number(e.target.value) || 0; reRendre(); });
 
+    $('#cess-origine').value = c.valeurOrigine || '';
+    $('#cess-origine').addEventListener('input', e => { c.valeurOrigine = Number(e.target.value) || 0; reRendre(); });
+
+    $('#cess-taux').value = (c.tauxImpot ?? 30);
+    $('#cess-taux').addEventListener('input', e => { c.tauxImpot = Number(e.target.value) || 0; reRendre(); });
+
+    // Pondération ajustable des 3 méthodes
+    const pond = Etat.data.ponderation;
+    const champsPond = { 'pond-ca': 'ca', 'pond-renta': 'rentabilite', 'pond-patri': 'patrimoniale' };
+    Object.entries(champsPond).forEach(([id, cle]) => {
+      const el = $('#' + id);
+      el.value = Math.round((Number(pond[cle]) || 0) * 100);
+      el.addEventListener('input', () => {
+        // On stocke en proportion (0–1) ; la normalisation se fait au calcul.
+        pond[cle] = (Number(el.value) || 0) / 100;
+        Etat.sauver();
+        this.majPonderation();
+        this.rendreRapport();
+      });
+    });
+    this.majPonderation();
+
     this.majCessionUI();
+  },
+
+  // Affiche les poids normalisés (somme = 100 %) sous chaque curseur
+  majPonderation() {
+    const p = Calculs.ponderationNorm();
+    $('#pond-ca-val').textContent = Math.round(p.ca * 100) + ' %';
+    $('#pond-renta-val').textContent = Math.round(p.rentabilite * 100) + ' %';
+    $('#pond-patri-val').textContent = Math.round(p.patrimoniale * 100) + ' %';
   },
 
   // Affiche/masque les champs trésorerie & dette selon le type de cession + l'activation
@@ -1057,11 +1138,12 @@ const UI = {
     const surv = Calculs.survaleurDetail();
     const cess = Calculs.cession(exclu);
     const t = Calculs.tendance();
+    const pond = Calculs.ponderationNorm();   // pondération ajustée des 3 méthodes
 
     // Détail « rentabilité » enrichi (EBE retraité + multiple effectif)
     const detailRenta = `EBE retraité moyen ${euro(Calculs.ebeRetraiteMoyen(exclu))} × ${Calculs.multipleEffectif(exclu).toFixed(2)}`
       + (retr.total !== 0 ? ` · dont retraitements ${retr.total >= 0 ? '+' : ''}${euro(retr.total)}` : '')
-      + ` · Pondération ${Math.round(CONFIG.ponderation.rentabilite*100)} %`;
+      + ` · Pondération ${Math.round(pond.rentabilite*100)} %`;
 
     // Ligne « survaleur » (affichée seulement si une prime/décote s'applique)
     const survSigne = surv.pct >= 0 ? '+' : '';
@@ -1096,9 +1178,22 @@ const UI = {
           </span><span class="font-bold text-marine-700">${euro(cess.droits)}</span>
         </div>
       </div>
+      <div class="rounded-xl border-2 border-marine-700/30 overflow-hidden mb-2">
+        <div class="bg-slate-50 p-4 text-sm">
+          <div class="flex justify-between py-1"><span class="text-slate-500">Prix de cession ${cess.type === 'titres' ? '(titres)' : '(fonds)'}</span><span class="font-semibold">${euro(cess.prix)}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-500">− Valeur d'origine</span><span class="font-semibold">− ${euro(cess.valeurOrigine)}</span></div>
+          <div class="flex justify-between py-1 border-t border-slate-200 mt-1 pt-2"><span class="font-semibold text-slate-700">= Plus-value brute</span><span class="font-bold text-marine-800">${euro(cess.plusValue)}</span></div>
+          ${cess.fractionExo > 0 ? `<div class="flex justify-between py-1"><span class="text-slate-500">Part exonérée (${cess.regimeExo === 'retraite' ? 'IR' : Math.round(cess.fractionExo*100) + ' %'})</span><span class="font-semibold text-menthe-600">${cess.regimeExo === 'retraite' ? 'IR exonéré, PS 17,2 % dus' : '− ' + euro(cess.plusValue * cess.fractionExo)}</span></div>` : ''}
+          <div class="flex justify-between py-1"><span class="text-slate-500">Impôt estimé sur la plus-value${cess.regimeExo === 'retraite' ? '' : ' (' + Math.round(cess.taux*100) + ' %)'}</span><span class="font-semibold text-framboise-600">− ${euro(cess.impot)}</span></div>
+        </div>
+        <div class="bg-marine-700 text-white p-4 flex items-center justify-between">
+          <span class="font-semibold">💰 Net vendeur estimé</span>
+          <span class="text-2xl font-extrabold">${euro(cess.netVendeur)}</span>
+        </div>
+      </div>
       <p class="text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-        ⚖️ ${cess.type === 'titres' ? 'Cession des titres' : 'Vente du fonds de commerce'} · Plus-value : ${cess.exoTexte}
-        <br><span class="text-slate-400">Estimations indicatives — la fiscalité personnelle (impôt sur la plus-value) dépend de votre situation ; rapprochez-vous de votre expert-comptable.</span>
+        ⚖️ ${cess.type === 'titres' ? 'Cession des titres' : 'Vente du fonds de commerce'} · Régime : ${cess.exoTexte}
+        <br><span class="text-slate-400">Estimations indicatives. Le net vendeur s'entend hors stock (facturé en sus) et hors frais de conseil. La fiscalité réelle (abattements pour durée de détention, situation personnelle, IS vs IR) doit être validée par votre expert-comptable.</span>
       </p>` : '';
 
     $('#rapport').innerHTML = `
@@ -1120,7 +1215,7 @@ const UI = {
           'Valeur par le Chiffre d\'affaires',
           'Barème professionnel : pourcentage du CA moyen selon l\'emplacement et le type de bail (50 % à 120 % pour un glacier).',
           courant.ca,
-          `Pondération finale : ${Math.round(CONFIG.ponderation.ca*100)} %`)}
+          `Pondération finale : ${Math.round(pond.ca*100)} %`)}
         ${ligneMethode(
           'Valeur par la Rentabilité',
           'Multiple de l\'EBE retraité moyen (×3 à ×5), ajusté selon la vétusté du matériel et la tendance du CA.',
@@ -1130,7 +1225,7 @@ const UI = {
           'Valeur Patrimoniale',
           'Actif tangible : matériel (valeur vénale après vétusté) + stock + droit au bail capitalisé.',
           courant.patri,
-          `Matériel ${euro(Calculs.valeurMateriel(exclu))} · Stock ${euro(Calculs.valeurStock())} · Droit au bail ${euro(Calculs.valeurDroitAuBail(exclu))} · Pondération ${Math.round(CONFIG.ponderation.patrimoniale*100)} %`)}
+          `Matériel ${euro(Calculs.valeurMateriel(exclu))} · Stock ${euro(Calculs.valeurStock())} · Droit au bail ${euro(Calculs.valeurDroitAuBail(exclu))} · Pondération ${Math.round(pond.patrimoniale*100)} %`)}
       </div>
 
       <!-- 2. Fourchette finale -->
@@ -1176,7 +1271,7 @@ const UI = {
 
       <p class="text-xs text-slate-400 mt-4">
         CA moyen 3 ans : ${euro(caGlobal)} (dont Kiosque ${euro(caKiosque)}, soit ${(Calculs.partKiosque()*100).toFixed(1)} %)${t.g !== null ? ` · tendance ${t.label} (${t.g >= 0 ? '+' : ''}${(t.g*100).toFixed(1)} %/an)` : ''}.
-        Méthode : pondération ${Math.round(CONFIG.ponderation.ca*100)}/${Math.round(CONFIG.ponderation.rentabilite*100)}/${Math.round(CONFIG.ponderation.patrimoniale*100)}
+        Méthode : pondération ${Math.round(pond.ca*100)}/${Math.round(pond.rentabilite*100)}/${Math.round(pond.patrimoniale*100)}
         (CA / Rentabilité / Patrimoniale)${Etat.data.survaleur.actif && surv.pct !== 0 ? `, survaleur ${survSigne}${(surv.pct*100).toFixed(1)} %` : ''}, fourchette ±${Math.round((1-CONFIG.fourchette.basse)*100)} %.
       </p>`;
   },

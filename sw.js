@@ -10,7 +10,7 @@
  * ========================================================================== */
 'use strict';
 
-const CACHE_VERSION = 'eval-glacier-v2';
+const CACHE_VERSION = 'eval-glacier-v3';
 
 // Ressources locales (chemins relatifs au scope du service worker).
 const ASSETS_LOCAUX = [
