@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Évaluateur de Fonds de Commerce — Glacier Artisanal</title>
+
+  <!-- ============================================================= -->
+  <!--  Tailwind CSS via CDN (aucune installation requise)            -->
+  <!-- ============================================================= -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Configuration de la palette (tons clairs, sérieux et lisibles)
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            marine: { 50:'#f0f6fb', 100:'#dceaf5', 600:'#1e6091', 700:'#184e75', 800:'#143d5c' },
+            glace:  { 50:'#fbf7f2', 100:'#f5ece0' },
+            menthe: { 500:'#3aa9a0', 600:'#2f8c84' },
+            framboise:{ 500:'#d94f6a', 600:'#bf3f57' },
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ---- Infobulles personnalisées (terme technique + icône ?) ---- */
+    .infobulle { position: relative; display: inline-flex; cursor: help; }
+    .infobulle .bulle {
+      visibility: hidden; opacity: 0; transition: opacity .15s ease;
+      position: absolute; bottom: 135%; left: 50%; transform: translateX(-50%);
+      width: 250px; background: #143d5c; color: #fff; text-align: left;
+      padding: 10px 12px; border-radius: 10px; font-size: 12px; line-height: 1.45;
+      z-index: 50; box-shadow: 0 8px 24px rgba(0,0,0,.18); font-weight: 400;
+    }
+    .infobulle:hover .bulle { visibility: visible; opacity: 1; }
+    .infobulle .bulle::after {
+      content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+      border-width: 6px; border-style: solid; border-color: #143d5c transparent transparent transparent;
+    }
+    /* Masque les flèches des champs nombre pour une UI plus propre */
+    input[type=number]::-webkit-inner-spin-button { opacity: .35; }
+
+    /* ----------------------- Styles d'impression ----------------------- */
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff !important; }
+      .print-zone { box-shadow: none !important; border: none !important; margin: 0 !important; }
+      @page { margin: 14mm; }
+    }
+  </style>
+</head>
+
+<body class="bg-glace-50 text-slate-800 font-sans antialiased">
+
+  <!-- ============================================================= -->
+  <!--  EN-TÊTE                                                       -->
+  <!-- ============================================================= -->
+  <header class="no-print bg-marine-700 text-white shadow-lg">
+    <div class="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🍦</span>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold leading-tight">Évaluateur de Fonds de Commerce</h1>
+          <p class="text-marine-100 text-xs sm:text-sm">Glacier artisanal multi-sites — Rapport d'expert</p>
+        </div>
+      </div>
+      <button id="btn-reset" class="text-marine-100 hover:text-white text-sm underline underline-offset-2">
+        Réinitialiser
+      </button>
+    </div>
+  </header>
+
+  <!-- ============================================================= -->
+  <!--  BANDEAU GLOBAL : Switch d'exclusion du Kiosque                -->
+  <!-- ============================================================= -->
+  <div class="no-print bg-amber-50 border-b border-amber-200">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-start gap-2 text-sm text-amber-900">
+        <span class="text-lg leading-none">⚠️</span>
+        <p>
+          <strong>Scénario juridique « pire cas ».</strong>
+          Le Kiosque dépend d'une
+          <span class="infobulle font-semibold underline decoration-dotted">AOT
+            <span class="bulle">AOT — Autorisation d'Occupation Temporaire du domaine public. Précaire et révocable : la mairie peut ne pas la renouveler. Elle ne crée aucun droit au bail commercial.</span>
+          </span>
+          de la mairie qui peut ne pas être renouvelée.
+        </p>
+      </div>
+      <label class="flex items-center gap-3 cursor-pointer select-none shrink-0">
+        <span class="text-sm font-semibold text-slate-700">Exclure le Kiosque</span>
+        <span class="relative inline-block w-12 h-6">
+          <input type="checkbox" id="switch-kiosque" class="peer sr-only">
+          <span class="absolute inset-0 rounded-full bg-slate-300 peer-checked:bg-framboise-500 transition-colors"></span>
+          <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-6"></span>
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!--  STEPPER (barre d'étapes)                                      -->
+  <!-- ============================================================= -->
+  <nav class="no-print bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-5xl mx-auto px-2 sm:px-4">
+      <ol id="stepper" class="flex items-stretch overflow-x-auto text-xs sm:text-sm"></ol>
+    </div>
+  </nav>
+
+  <!-- ============================================================= -->
+  <!--  CONTENU DES ÉTAPES                                            -->
+  <!-- ============================================================= -->
+  <main class="max-w-5xl mx-auto px-4 py-6">
+
+    <!-- ----------------------------------------------------------- -->
+    <!-- ÉTAPE 1 — Juridique & Emplacements                          -->
+    <!-- ----------------------------------------------------------- -->
+    <section data-panel="0" class="panel">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <h2 class="text-xl font-bold text-marine-800 mb-1">Étape 1 — Juridique & Emplacements</h2>
+        <p class="text-slate-500 text-sm mb-6">
+          Le « fonds de commerce » repose d'abord sur la qualité des baux et des emplacements.
+          Renseignez chaque site. <span class="text-slate-400">(Le CA est saisi à l'étape 2.)</span>
+        </p>
+        <div id="grille-sites" class="grid sm:grid-cols-2 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- -->
+    <!-- ÉTAPE 2 — Financière                                        -->
+    <!-- ----------------------------------------------------------- -->
+    <section data-panel="1" class="panel hidden">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <h2 class="text-xl font-bold text-marine-800 mb-1">Étape 2 — Comptabilité (3 derniers exercices)</h2>
+        <p class="text-slate-500 text-sm mb-6">
+          Saisissez les chiffres des 3 dernières années. Le
+          <span class="infobulle font-semibold underline decoration-dotted">CA Port
+            <span class="bulle">CA réalisé hors Kiosque (Boutique du Port + ventes labo/réserve). Calculé automatiquement = CA global − CA Kiosque.</span>
+          </span>
+          est calculé automatiquement.
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="text-left text-slate-500 border-b border-slate-200">
+                <th class="py-2 pr-3 font-medium">Donnée annuelle (€)</th>
+                <th class="py-2 px-2 font-medium text-center">Année N-2</th>
+                <th class="py-2 px-2 font-medium text-center">Année N-1</th>
+                <th class="py-2 px-2 font-medium text-center">Année N</th>
+              </tr>
+            </thead>
+            <tbody id="corps-finances"></tbody>
+          </table>
+        </div>
+
+        <div class="mt-6 grid sm:grid-cols-2 gap-4">
+          <div class="bg-marine-50 rounded-xl p-4">
+            <label class="flex items-center gap-1 text-sm font-semibold text-marine-800 mb-2">
+              Multiple de l'EBE
+              <span class="infobulle text-marine-600">ⓘ
+                <span class="bulle">Coefficient appliqué à l'EBE retraité moyen pour estimer la valeur de rentabilité. Pour un glacier : 3 (emplacement/rentabilité fragile) à 5 (excellent). Standard : 4.</span>
+              </span>
+            </label>
+            <input type="range" id="multiple-ebe" min="3" max="5" step="0.1" value="4"
+                   class="w-full accent-marine-600">
+            <div class="text-marine-700 font-bold text-lg mt-1"><span id="multiple-ebe-val">4.0</span> ×</div>
+          </div>
+          <div class="bg-marine-50 rounded-xl p-4">
+            <label class="flex items-center gap-1 text-sm font-semibold text-marine-800 mb-2">
+              Rémunération à réintégrer (retraitement)
+              <span class="infobulle text-marine-600">ⓘ
+                <span class="bulle">EBE retraité : on réintègre une rémunération « excessive » du dirigeant, ou des charges non récurrentes, pour refléter la vraie capacité bénéficiaire. Laissez 0 si non concerné.</span>
+              </span>
+            </label>
+            <input type="number" id="retraitement-ebe" min="0" step="1000" placeholder="0"
+                   class="champ w-full">
+            <p class="text-xs text-slate-500 mt-1">€/an, ajouté à l'EBE moyen.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- -->
+    <!-- ÉTAPE 3 — Matériel & Vétusté                                -->
+    <!-- ----------------------------------------------------------- -->
+    <section data-panel="2" class="panel hidden">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <div class="flex items-start justify-between gap-4 mb-1">
+          <h2 class="text-xl font-bold text-marine-800">Étape 3 — Matériel, Véhicules & Vétusté</h2>
+          <button id="btn-add-materiel"
+                  class="shrink-0 bg-menthe-500 hover:bg-menthe-600 text-white text-sm font-semibold px-3 py-2 rounded-lg">
+            + Ajouter une ligne
+          </button>
+        </div>
+        <p class="text-slate-500 text-sm mb-6">
+          Choisissez le matériel dans la liste (le prix à neuf est pré-rempli, modifiable). Le coefficient de
+          <span class="infobulle font-semibold underline decoration-dotted">vétusté
+            <span class="bulle">Décote appliquée selon l'état pour obtenir la « valeur vénale réelle » (valeur de revente). Neuf 90 %, Bon 70 %, Usagé 40 %, Fin de vie 10 %.</span>
+          </span>
+          est appliqué automatiquement.
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-slate-500 border-b border-slate-200">
+                <th class="py-2 pr-2 font-medium">Matériel</th>
+                <th class="py-2 px-2 font-medium">Site</th>
+                <th class="py-2 px-2 font-medium text-right">Valeur à neuf (€)</th>
+                <th class="py-2 px-2 font-medium">État</th>
+                <th class="py-2 px-2 font-medium text-right">Valeur vénale</th>
+                <th class="py-2 pl-2"></th>
+              </tr>
+            </thead>
+            <tbody id="corps-materiel"></tbody>
+          </table>
+        </div>
+        <p id="materiel-vide" class="text-slate-400 text-sm italic mt-4 hidden">
+          Aucun matériel saisi. Cliquez sur « + Ajouter une ligne ».
+        </p>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- -->
+    <!-- ÉTAPE 4 — Stock                                             -->
+    <!-- ----------------------------------------------------------- -->
+    <section data-panel="3" class="panel hidden">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <h2 class="text-xl font-bold text-marine-800 mb-1">Étape 4 — Stock au jour J</h2>
+        <p class="text-slate-500 text-sm mb-6">Valorisation brute au prix d'achat (HT).</p>
+
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div class="bg-glace-100 rounded-xl p-5">
+            <label class="flex items-center gap-1 font-semibold text-slate-700 mb-2">
+              🧊 Matières premières
+              <span class="infobulle text-slate-400">ⓘ
+                <span class="bulle">Mix à glace, poudres, purées de fruits, sucres, cornets, pots, packaging, petits consommables.</span>
+              </span>
+            </label>
+            <input type="number" id="stock-mp" min="0" step="100" placeholder="0" class="champ w-full text-lg">
+          </div>
+          <div class="bg-glace-100 rounded-xl p-5">
+            <label class="flex items-center gap-1 font-semibold text-slate-700 mb-2">
+              🍨 Produits finis
+              <span class="infobulle text-slate-400">ⓘ
+                <span class="bulle">Bacs de glace et sorbets déjà fabriqués, stockés en réserve négative, valorisés au coût de production / prix d'achat des matières.</span>
+              </span>
+            </label>
+            <input type="number" id="stock-pf" min="0" step="100" placeholder="0" class="champ w-full text-lg">
+          </div>
+        </div>
+
+        <div class="mt-6 bg-menthe-500/10 border border-menthe-500/30 rounded-xl p-4 flex items-center justify-between">
+          <span class="font-semibold text-menthe-600">Valeur totale du stock</span>
+          <span id="stock-total" class="text-xl font-bold text-menthe-600">0 €</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- -->
+    <!-- ÉTAPE 5 — Tableau de bord / Rapport                         -->
+    <!-- ----------------------------------------------------------- -->
+    <section data-panel="4" class="panel hidden">
+      <div id="rapport" class="print-zone bg-white rounded-2xl shadow-sm border border-slate-100 p-6"></div>
+
+      <div class="no-print mt-4 flex flex-wrap gap-3 justify-end">
+        <button id="btn-print"
+                class="bg-marine-700 hover:bg-marine-800 text-white font-semibold px-5 py-2.5 rounded-lg flex items-center gap-2">
+          🖨️ Imprimer / Exporter en PDF
+        </button>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- -->
+    <!-- NAVIGATION PRÉCÉDENT / SUIVANT                              -->
+    <!-- ----------------------------------------------------------- -->
+    <div class="no-print flex items-center justify-between mt-6">
+      <button id="btn-prev"
+              class="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">
+        ← Précédent
+      </button>
+      <button id="btn-next"
+              class="px-5 py-2.5 rounded-lg bg-marine-700 hover:bg-marine-800 text-white font-semibold disabled:opacity-40">
+        Suivant →
+      </button>
+    </div>
+
+  </main>
+
+  <footer class="no-print max-w-5xl mx-auto px-4 py-8 text-center text-xs text-slate-400">
+    Outil d'aide à l'évaluation — les résultats constituent une estimation indicative et ne se substituent pas
+    à l'avis d'un expert-comptable ou d'un commissaire à l'évaluation.
+  </footer>
+
+  <!-- ============================================================= -->
+  <!--  MOTEUR DE CALCUL & INTERFACE (JavaScript modulaire)          -->
+  <!-- ============================================================= -->
+  <script src="app.js"></script>
+</body>
+</html>
