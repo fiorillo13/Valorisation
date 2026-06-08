@@ -18,10 +18,26 @@ mémorisées localement (localStorage) entre deux sessions.
 | Étape | Objet | Méthode de calcul |
 |------|-------|-------------------|
 | 1 — Juridique & Emplacements | Bail, loyer, note d'emplacement par site | Barème % du CA + droit au bail capitalisé |
-| 2 — Comptabilité (3 ans) | CA global/Kiosque, EBE, masse salariale, charges | Multiple de l'EBE retraité (×3 à ×5) |
-| 3 — Matériel & Vétusté | Inventaire avec catalogue glacier pré-rempli | Valeur vénale = valeur à neuf × coef. vétusté |
-| 4 — Stock | Matières premières + produits finis | Valorisation brute au prix d'achat |
-| 5 — Rapport d'expert | Synthèse | Fourchette pondérée Basse / Médiane / Haute |
+| 2 — Comptabilité (3 ans) | CA global/Kiosque, EBE, charges + pondération/tendance | Multiple de l'EBE, ajusté vétusté **et tendance du CA** |
+| 3 — Retraitements de l'EBE | Rémunération dirigeant, loyer de marché (SCI), charges except., crédit-bail | EBE **retraité** = capacité bénéficiaire réelle |
+| 4 — Matériel & Vétusté | Inventaire avec catalogue glacier pré-rempli | Valeur vénale = valeur à neuf × coef. vétusté |
+| 5 — Stock | Matières premières + produits finis | Valorisation brute au prix d'achat |
+| 6 — Survaleur & risque | Notoriété, label artisan, B2B récurrent, saisonnalité, homme-clé, perspectives | Prime / décote incorporelle (borne −25 % / +35 %) |
+| 7 — Cession & Rapport | Type de cession, trésorerie, dette, exonération | Net vendeur + synthèse Basse / Médiane / Haute |
+
+### Modules de revalorisation (niveau cession)
+
+- **Retraitements de l'EBE** — le levier n°1 : on corrige la comptabilité
+  (rémunération du dirigeant vs marché, loyer de marché si murs en SCI, charges
+  exceptionnelles, crédit-bail) pour révéler la vraie capacité bénéficiaire.
+- **Tendance du CA** — pondération du dernier exercice et bonus/malus de
+  multiple selon la croissance ou le déclin.
+- **Survaleur incorporelle** — questionnaire (réputation, label artisan,
+  revenus B2B récurrents, saisonnalité, dépendance homme-clé, perspectives)
+  produisant une prime/décote argumentée sur la valeur finale.
+- **Cession & net vendeur** — passage valeur d'entreprise → valeur des titres
+  (+ trésorerie − dette nette), provision de renouvellement du matériel en fin
+  de vie, droits d'enregistrement et régimes d'exonération de plus-value.
 
 ## ⚠️ Option « Exclure le Kiosque »
 

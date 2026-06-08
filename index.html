@@ -230,7 +230,7 @@
             <label class="flex items-center gap-1 text-sm font-semibold text-marine-800 mb-2">
               Multiple de l'EBE
               <span class="infobulle text-marine-600">ⓘ
-                <span class="bulle">Coefficient appliqué à l'EBE retraité moyen pour estimer la valeur de rentabilité. Pour un glacier : 3 (emplacement/rentabilité fragile) à 5 (excellent). Standard : 4.</span>
+                <span class="bulle">Coefficient appliqué à l'EBE retraité moyen pour estimer la valeur de rentabilité. Pour un glacier : 3 (emplacement/rentabilité fragile) à 5 (excellent). Standard : 4. Ajusté ensuite selon la vétusté et la tendance.</span>
               </span>
             </label>
             <input type="range" id="multiple-ebe" min="3" max="5" step="0.1" value="4"
@@ -238,27 +238,89 @@
             <div class="text-marine-700 font-bold text-lg mt-1"><span id="multiple-ebe-val">4.0</span> ×</div>
           </div>
           <div class="bg-marine-50 rounded-xl p-4">
-            <label class="flex items-center gap-1 text-sm font-semibold text-marine-800 mb-2">
-              Rémunération à réintégrer (retraitement)
+            <label class="flex items-center gap-2 text-sm font-semibold text-marine-800 mb-2 cursor-pointer">
+              <input type="checkbox" id="ponderer-exercices" class="accent-marine-600 w-4 h-4">
+              Pondérer les exercices
               <span class="infobulle text-marine-600">ⓘ
-                <span class="bulle">EBE retraité : on réintègre une rémunération « excessive » du dirigeant, ou des charges non récurrentes, pour refléter la vraie capacité bénéficiaire. Laissez 0 si non concerné.</span>
+                <span class="bulle">Le dernier exercice (le plus représentatif) pèse davantage dans les moyennes. Active aussi l'ajustement du multiple selon la tendance (croissance ou déclin du CA).</span>
               </span>
             </label>
-            <input type="number" inputmode="numeric" id="retraitement-ebe" min="0" step="1000" placeholder="0"
-                   class="champ w-full">
-            <p class="text-xs text-slate-500 mt-1">€/an, ajouté à l'EBE moyen.</p>
+            <div id="tendance-readout" class="text-sm text-slate-600 mt-2">—</div>
           </div>
         </div>
       </div>
     </section>
 
     <!-- ----------------------------------------------------------- -->
-    <!-- ÉTAPE 3 — Matériel & Vétusté                                -->
+    <!-- ÉTAPE 3 — Retraitements de l'EBE (NOUVEAU)                  -->
     <!-- ----------------------------------------------------------- -->
     <section data-panel="2" class="panel hidden">
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
         <div class="flex items-start justify-between gap-4 mb-1">
-          <h2 class="text-xl font-bold text-marine-800">Étape 3 — Matériel, Véhicules & Vétusté</h2>
+          <h2 class="text-xl font-bold text-marine-800">Étape 3 — Retraitements de l'EBE
+            <span class="infobulle text-marine-600 text-base align-middle">ⓘ
+              <span class="bulle">« Retraiter » l'EBE = corriger la comptabilité pour révéler la vraie capacité bénéficiaire transmissible. C'est le levier n°1 de valorisation : le multiple s'applique à cet EBE corrigé.</span>
+            </span>
+          </h2>
+          <label class="flex items-center gap-2 text-sm font-semibold text-slate-600 cursor-pointer shrink-0">
+            <input type="checkbox" id="retr-actif" class="accent-marine-600 w-4 h-4"> Activer
+          </label>
+        </div>
+        <p class="text-slate-500 text-sm mb-6">Optionnel mais recommandé. Laissez les champs à 0 si non concerné.</p>
+
+        <div id="bloc-retraitements" class="grid sm:grid-cols-2 gap-4">
+          <div class="bg-slate-50 rounded-xl p-4">
+            <p class="font-semibold text-slate-700 mb-1 flex items-center gap-1">👤 Rémunération du dirigeant
+              <span class="infobulle text-slate-400 text-xs">ⓘ<span class="bulle">On compare ce que se verse le dirigeant à un salaire de marché pour un gérant équivalent. L'écart corrige l'EBE (un dirigeant sous-payé gonfle artificiellement l'EBE, et inversement).</span></span>
+            </p>
+            <label class="block text-xs text-slate-500 mt-2 mb-1">Rémunération annuelle actuelle (€)</label>
+            <input type="number" inputmode="numeric" id="retr-rem-actuelle" min="0" step="1000" placeholder="0" class="champ w-full">
+            <label class="block text-xs text-slate-500 mt-2 mb-1">Salaire de marché d'un gérant (€)</label>
+            <input type="number" inputmode="numeric" id="retr-rem-marche" min="0" step="1000" placeholder="0" class="champ w-full">
+          </div>
+
+          <div class="bg-slate-50 rounded-xl p-4">
+            <p class="font-semibold text-slate-700 mb-1 flex items-center gap-1">🏠 Loyer des murs
+              <span class="infobulle text-slate-400 text-xs">ⓘ<span class="bulle">Si les murs sont détenus en propre (souvent via une SCI), le loyer versé n'est pas « de marché ». On le ramène au loyer de marché que paiera le repreneur.</span></span>
+            </p>
+            <label class="block text-xs text-slate-500 mt-2 mb-1">Loyer actuellement versé (€/an)</label>
+            <input type="number" inputmode="numeric" id="retr-loyer-actuel" min="0" step="500" placeholder="0" class="champ w-full">
+            <label class="block text-xs text-slate-500 mt-2 mb-1">Loyer de marché (€/an)</label>
+            <input type="number" inputmode="numeric" id="retr-loyer-marche" min="0" step="500" placeholder="0" class="champ w-full">
+          </div>
+
+          <div class="bg-slate-50 rounded-xl p-4">
+            <p class="font-semibold text-slate-700 mb-1 flex items-center gap-1">⚡ Charges exceptionnelles
+              <span class="infobulle text-slate-400 text-xs">ⓘ<span class="bulle">Charges non récurrentes à réintégrer : réparations exceptionnelles, frais personnels passés en société, litiges, frais de cession… Elles ne se reproduiront pas.</span></span>
+            </p>
+            <label class="block text-xs text-slate-500 mt-2 mb-1">Montant à réintégrer (€/an)</label>
+            <input type="number" inputmode="numeric" id="retr-except" min="0" step="500" placeholder="0" class="champ w-full">
+          </div>
+
+          <div class="bg-slate-50 rounded-xl p-4">
+            <p class="font-semibold text-slate-700 mb-1 flex items-center gap-1">📑 Crédit-bail
+              <span class="infobulle text-slate-400 text-xs">ⓘ<span class="bulle">Redevances de crédit-bail (matériel, véhicule) à réintégrer à l'EBE pour le rendre comparable à un EBE hors financement. Le bien correspondant peut être inscrit au matériel.</span></span>
+            </p>
+            <label class="block text-xs text-slate-500 mt-2 mb-1">Redevances annuelles (€/an)</label>
+            <input type="number" inputmode="numeric" id="retr-cb" min="0" step="500" placeholder="0" class="champ w-full">
+          </div>
+        </div>
+
+        <div class="mt-6 bg-marine-700 rounded-xl p-4 flex items-center justify-between text-white">
+          <span class="font-semibold">EBE retraité moyen estimé</span>
+          <span id="retr-ebe-total" class="text-xl font-bold">0 €</span>
+        </div>
+        <p id="retr-detail" class="text-xs text-slate-400 mt-2"></p>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- -->
+    <!-- ÉTAPE 4 — Matériel & Vétusté                                -->
+    <!-- ----------------------------------------------------------- -->
+    <section data-panel="3" class="panel hidden">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <div class="flex items-start justify-between gap-4 mb-1">
+          <h2 class="text-xl font-bold text-marine-800">Étape 4 — Matériel, Véhicules & Vétusté</h2>
           <button id="btn-add-materiel"
                   class="shrink-0 bg-menthe-500 hover:bg-menthe-600 text-white text-sm font-semibold px-3 py-2 rounded-lg">
             + Ajouter une ligne
@@ -294,11 +356,11 @@
     </section>
 
     <!-- ----------------------------------------------------------- -->
-    <!-- ÉTAPE 4 — Stock                                             -->
+    <!-- ÉTAPE 5 — Stock                                             -->
     <!-- ----------------------------------------------------------- -->
-    <section data-panel="3" class="panel hidden">
+    <section data-panel="4" class="panel hidden">
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <h2 class="text-xl font-bold text-marine-800 mb-1">Étape 4 — Stock au jour J</h2>
+        <h2 class="text-xl font-bold text-marine-800 mb-1">Étape 5 — Stock au jour J</h2>
         <p class="text-slate-500 text-sm mb-6">Valorisation brute au prix d'achat (HT).</p>
 
         <div class="grid sm:grid-cols-2 gap-4">
@@ -330,9 +392,85 @@
     </section>
 
     <!-- ----------------------------------------------------------- -->
-    <!-- ÉTAPE 5 — Tableau de bord / Rapport                         -->
+    <!-- ÉTAPE 6 — Survaleur incorporelle & risque (NOUVEAU)        -->
     <!-- ----------------------------------------------------------- -->
-    <section data-panel="4" class="panel hidden">
+    <section data-panel="5" class="panel hidden">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <div class="flex items-start justify-between gap-4 mb-1">
+          <h2 class="text-xl font-bold text-marine-800">Étape 6 — Survaleur incorporelle & risque
+            <span class="infobulle text-marine-600 text-base align-middle">ⓘ
+              <span class="bulle">Au-delà des chiffres, ce qui fait la vraie valeur d'un glacier : réputation, savoir-faire, clientèle, faible dépendance. Ce questionnaire en déduit une prime (ou une décote) appliquée à la valeur finale.</span>
+            </span>
+          </h2>
+          <label class="flex items-center gap-2 text-sm font-semibold text-slate-600 cursor-pointer shrink-0">
+            <input type="checkbox" id="surv-actif" class="accent-marine-600 w-4 h-4"> Activer
+          </label>
+        </div>
+        <p class="text-slate-500 text-sm mb-6">Répondez pour chaque critère ; la prime/décote se met à jour en direct.</p>
+
+        <div id="grille-survaleur" class="grid sm:grid-cols-2 gap-4"></div>
+
+        <div class="mt-6 rounded-xl p-4 flex items-center justify-between text-white" id="surv-bandeau">
+          <span class="font-semibold">Prime / décote de survaleur</span>
+          <span id="surv-pct" class="text-xl font-bold">0 %</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- -->
+    <!-- ÉTAPE 7 — Cession & Rapport d'expert                        -->
+    <!-- ----------------------------------------------------------- -->
+    <section data-panel="6" class="panel hidden">
+
+      <!-- Paramètres de cession (statiques : ne sont pas réécrits par le rapport) -->
+      <div class="no-print bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-4">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <h2 class="text-xl font-bold text-marine-800">Paramètres de cession
+            <span class="infobulle text-marine-600 text-base align-middle">ⓘ
+              <span class="bulle">Modalités juridiques de la vente : vend-on le fonds de commerce seul, ou les parts de la société (avec sa trésorerie et ses dettes) ? Ces choix déterminent le prix net.</span>
+            </span>
+          </h2>
+          <label class="flex items-center gap-2 text-sm font-semibold text-slate-600 cursor-pointer shrink-0">
+            <input type="checkbox" id="cess-actif" class="accent-marine-600 w-4 h-4"> Afficher
+          </label>
+        </div>
+
+        <div id="bloc-cession" class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1">Type de cession
+              <span class="infobulle text-slate-400">ⓘ<span class="bulle">Vente du FONDS : on cède l'activité (clientèle, matériel, droit au bail). Cession des TITRES (parts) : on cède la société entière, donc aussi sa trésorerie et ses dettes.</span></span>
+            </label>
+            <select id="cess-type" class="champ w-full">
+              <option value="fonds">Vente du fonds de commerce</option>
+              <option value="titres">Cession des titres (parts sociales)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1">Régime d'exonération de plus-value
+              <span class="infobulle text-slate-400">ⓘ<span class="bulle">Selon votre situation, la plus-value de cession peut être exonérée (valeur ≤ 500 k€, départ à la retraite…). Information indicative — à confirmer avec votre conseil.</span></span>
+            </label>
+            <select id="cess-exo" class="champ w-full">
+              <option value="aucun">Aucun / non déterminé</option>
+              <option value="art238">Art. 238 quindecies (≤ 500 k€)</option>
+              <option value="retraite">Départ à la retraite (151 septies A)</option>
+              <option value="art151septies">Seuil de recettes (151 septies)</option>
+            </select>
+          </div>
+          <div id="cess-tresorerie-wrap">
+            <label class="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1">Trésorerie disponible (€)
+              <span class="infobulle text-slate-400">ⓘ<span class="bulle">Cession de titres uniquement : trésorerie nette transmise avec la société, qui s'ajoute au prix.</span></span>
+            </label>
+            <input type="number" inputmode="numeric" id="cess-tresorerie" min="0" step="1000" placeholder="0" class="champ w-full">
+          </div>
+          <div id="cess-dette-wrap">
+            <label class="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1">Dette nette restante (€)
+              <span class="infobulle text-slate-400">ⓘ<span class="bulle">Cession de titres uniquement : emprunts et crédit-bail restant dus, déduits du prix.</span></span>
+            </label>
+            <input type="number" inputmode="numeric" id="cess-dette" min="0" step="1000" placeholder="0" class="champ w-full">
+          </div>
+        </div>
+      </div>
+
       <div id="rapport" class="print-zone bg-white rounded-2xl shadow-sm border border-slate-100 p-6"></div>
 
       <div class="no-print mt-4 flex flex-wrap gap-3 justify-end">

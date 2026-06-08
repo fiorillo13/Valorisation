@@ -92,9 +92,98 @@ const CONFIG = {
     { val: 'B', label: 'Zone B — Moyen' },
     { val: 'C', label: 'Zone C — Faible' },
   ],
+
+  /* ===========================================================================
+   *  MODULES DE REVALORISATION (niveau cession)
+   * ======================================================================== */
+
+  // --- Module « Tendance » : pondération des 3 exercices (N-2, N-1, N) ------
+  //  Le dernier exercice, plus représentatif, pèse davantage.
+  ponderationExercices: [1, 2, 3],           // normalisés automatiquement (≈ 17/33/50 %)
+
+  // --- Module « Tendance » : ajustement du multiple selon la croissance -----
+  //  Seuils de croissance annuelle moyenne du CA → bonus/malus sur le multiple.
+  tendanceMultiple: [
+    { seuil: 0.08,  delta: 0.5,  label: 'Forte croissance' },
+    { seuil: 0.03,  delta: 0.25, label: 'Croissance' },
+    { seuil: -0.03, delta: 0.0,  label: 'Stable' },
+    { seuil: -0.08, delta: -0.3, label: 'Léger recul' },
+    { seuil: -Infinity, delta: -0.6, label: 'Déclin marqué' },
+  ],
+
+  // --- Module « Survaleur incorporelle & risque » : questionnaire scoré -----
+  //  Chaque facteur ajoute/retire des points de % appliqués à la valeur finale.
+  facteursSurvaleur: [
+    { id: 'reputation', label: 'Notoriété & e-réputation',
+      aide: 'Avis Google/TripAdvisor, note moyenne, abonnés réseaux sociaux. Crucial sur un emplacement touristique.',
+      options: [
+        { val: 'forte',  label: 'Excellente (>4,5★, nombreux avis)', pts: 10 },
+        { val: 'bonne',  label: 'Bonne', pts: 4 },
+        { val: 'moyenne',label: 'Moyenne', pts: 0 },
+        { val: 'faible', label: 'Faible / peu d\'avis', pts: -8 },
+      ] },
+    { id: 'savoirFaire', label: 'Label artisan & savoir-faire',
+      aide: 'Mention « Artisan Glacier », médailles/concours, recettes « fait maison » documentées et transmissibles, ingrédients AOP/bio.',
+      options: [
+        { val: 'fort',  label: 'Fort (label + médailles + recettes documentées)', pts: 10 },
+        { val: 'moyen', label: 'Moyen', pts: 3 },
+        { val: 'faible',label: 'Faible / non formalisé', pts: -5 },
+      ] },
+    { id: 'b2b', label: 'Revenus récurrents B2B',
+      aide: 'Revente à restaurants/hôtels, événementiel, marchés, distribution. Du CA récurrent et hors saison vaut beaucoup plus cher.',
+      options: [
+        { val: 'fort',  label: 'Significatifs (>20 % du CA, contrats)', pts: 8 },
+        { val: 'moyen', label: 'Quelques-uns', pts: 3 },
+        { val: 'aucun', label: 'Aucun (comptoir uniquement)', pts: 0 },
+      ] },
+    { id: 'saison', label: 'Saisonnalité',
+      aide: 'Une activité étalée sur l\'année (chocolats, événementiel l\'hiver) réduit le risque. Une saison très courte le concentre.',
+      options: [
+        { val: 'annuelle', label: 'Activité à l\'année', pts: 6 },
+        { val: 'longue',   label: 'Longue saison', pts: 2 },
+        { val: 'courte',   label: 'Saison courte (très saisonnier)', pts: -8 },
+      ] },
+    { id: 'hommeCle', label: 'Dépendance à l\'homme-clé',
+      aide: 'Si le savoir-faire repose sur le dirigeant, le risque de transmission est élevé. Une équipe autonome + un accompagnement du repreneur rassurent.',
+      options: [
+        { val: 'faible',  label: 'Faible (équipe autonome, accompagnement prévu)', pts: 4 },
+        { val: 'moyenne', label: 'Moyenne', pts: 0 },
+        { val: 'forte',   label: 'Forte (tout repose sur le dirigeant)', pts: -10 },
+      ] },
+    { id: 'perspectives', label: 'Perspectives de marché',
+      aide: 'Dynamique locale : fréquentation touristique, concurrence, projets d\'urbanisme, tendance de consommation.',
+      options: [
+        { val: 'favorables',  label: 'Favorables', pts: 5 },
+        { val: 'stables',     label: 'Stables', pts: 0 },
+        { val: 'defavorables',label: 'Défavorables', pts: -8 },
+      ] },
+  ],
+
+  // Bornes de la prime/décote globale de survaleur (en %)
+  survaleurBornes: { min: -0.25, max: 0.35 },
+
+  // --- Module « Net vendeur » -----------------------------------------------
+  // Provision de renouvellement : part du prix à neuf des matériels « en fin de
+  // vie » que le repreneur devra réinvestir (déduite de la valeur).
+  provisionRenouvellement: 0.50,
+
+  // Barème des droits d'enregistrement sur cession de fonds de commerce (France)
+  droitsEnregistrement: [
+    { de: 0,      a: 23000,   taux: 0.00 },
+    { de: 23000,  a: 200000,  taux: 0.03 },
+    { de: 200000, a: Infinity,taux: 0.05 },
+  ],
+
+  // Régimes d'exonération de plus-value (information pédagogique)
+  regimesExoneration: {
+    aucun:        'Aucun régime d\'exonération particulier retenu.',
+    art238:       'Art. 238 quindecies : exonération totale si valeur ≤ 300 k€, partielle ≤ 500 k€ (sous conditions de durée d\'activité).',
+    retraite:     'Art. 151 septies A : exonération de la plus-value en cas de départ à la retraite du cédant (sous conditions).',
+    art151septies:'Art. 151 septies : exonération selon le niveau de recettes (seuils CHR), sous conditions de durée.',
+  },
 };
 
-const ETAPES = ['Juridique', 'Financier', 'Matériel', 'Stock', 'Rapport'];
+const ETAPES = ['Juridique', 'Comptabilité', 'Retraitements', 'Matériel', 'Stock', 'Survaleur', 'Rapport'];
 
 /* =============================================================================
  *  2. ETAT — Modèle de données + persistance
@@ -120,10 +209,37 @@ const Etat = {
         masse:     [0, 0, 0],   // masse salariale
         charges:   [0, 0, 0],   // charges fixes
         multiple: 4,
-        retraitement: 0,
+        ponderer: true,         // pondérer les exercices (dernier exercice plus lourd)
       },
       materiel: [],             // { nom, site, prixNeuf, etat }
       stock: { mp: 0, pf: 0 },
+
+      // --- Module 1 : retraitements de l'EBE ---
+      retraitements: {
+        actif: true,
+        remunerationActuelle: 0,   // rémunération annuelle réelle du dirigeant
+        remunerationMarche: 0,     // salaire de marché d'un gérant équivalent
+        loyerActuelMurs: 0,        // loyer réellement versé (ex. à une SCI)
+        loyerMarcheMurs: 0,        // loyer de marché des locaux détenus
+        chargesExcept: 0,          // charges non récurrentes à réintégrer
+        creditBail: 0,             // redevances de crédit-bail à réintégrer
+      },
+
+      // --- Module 2/3 : survaleur incorporelle & risque ---
+      survaleur: {
+        actif: true,
+        reputation: 'moyenne', savoirFaire: 'moyen', b2b: 'aucun',
+        saison: 'longue', hommeCle: 'moyenne', perspectives: 'stables',
+      },
+
+      // --- Module 4 : cession & net vendeur ---
+      cession: {
+        actif: true,
+        type: 'fonds',          // 'fonds' (vente du fonds) | 'titres' (cession de parts)
+        tresorerie: 0,          // trésorerie disponible (cession de titres)
+        detteNette: 0,          // emprunts / crédit-bail restant dû
+        regimeExo: 'aucun',
+      },
     };
   },
 
@@ -145,6 +261,9 @@ const Etat = {
     out.finances = Object.assign({}, base.finances, charge.finances || {});
     out.stock = Object.assign({}, base.stock, charge.stock || {});
     out.materiel = Array.isArray(charge.materiel) ? charge.materiel : base.materiel;
+    out.retraitements = Object.assign({}, base.retraitements, charge.retraitements || {});
+    out.survaleur = Object.assign({}, base.survaleur, charge.survaleur || {});
+    out.cession = Object.assign({}, base.cession, charge.cession || {});
     if (charge.majLe) out.majLe = charge.majLe;
     return out;
   },
@@ -189,11 +308,40 @@ const Calculs = {
     return nums.reduce((a, b) => a + b, 0) / nums.length;
   },
 
-  // --- CA moyens ventilés ---------------------------------------------------
+  /* Moyenne pondérée des 3 exercices [N-2, N-1, N] : le dernier exercice, plus
+   * représentatif, pèse davantage (module « Tendance »). Bascule sur la moyenne
+   * simple si la pondération est désactivée ou les données incomplètes. */
+  moyenneExercices(tab) {
+    const f = Etat.data.finances;
+    const vals = (tab || []).map(Number);
+    // Pondération désactivée ou exercices manquants → moyenne simple
+    if (!f.ponderer || vals.length !== 3 || vals.some(isNaN)) return this.moyenne(tab);
+    const w = CONFIG.ponderationExercices;
+    const sommeW = w[0] + w[1] + w[2];
+    return (vals[0] * w[0] + vals[1] * w[1] + vals[2] * w[2]) / sommeW;
+  },
+
+  /* Croissance annuelle moyenne du CA sur la période (module « Tendance »).
+   * Renvoie un taux décimal (ex. 0.05 = +5 %/an) ou null si non calculable. */
+  croissanceCA() {
+    const ca = (Etat.data.finances.ca || []).map(Number);
+    if (ca.length !== 3 || ca.some(isNaN) || ca[0] <= 0 || ca[2] <= 0) return null;
+    return Math.pow(ca[2] / ca[0], 1 / 2) - 1; // taux annuel moyen sur 2 ans
+  },
+
+  // Libellé + delta de multiple associés à la tendance du CA
+  tendance() {
+    const g = this.croissanceCA();
+    if (g === null) return { g: null, delta: 0, label: 'Indéterminée' };
+    const palier = CONFIG.tendanceMultiple.find(p => g >= p.seuil);
+    return { g, delta: palier.delta, label: palier.label };
+  },
+
+  // --- CA moyens ventilés (pondérés selon le module Tendance) ---------------
   caMoyens() {
     const f = Etat.data.finances;
-    const caGlobal = this.moyenne(f.ca);
-    const caKiosque = this.moyenne(f.caKiosque);
+    const caGlobal = this.moyenneExercices(f.ca);
+    const caKiosque = this.moyenneExercices(f.caKiosque);
     const caPort = Math.max(0, caGlobal - caKiosque); // tout le reste = hors kiosque
     return { caGlobal, caKiosque, caPort };
   },
@@ -249,10 +397,34 @@ const Calculs = {
     return min + t * (max - min);
   },
 
+  /* Multiple effectif appliqué à l'EBE : base × vétusté (+ tendance du CA).
+   * Borné à [2,5 ; 6] pour rester réaliste dans le secteur. */
+  multipleEffectif(exclureK) {
+    const base = Number(Etat.data.finances.multiple) || 4;
+    let m = base * this.facteurMultiple(exclureK);
+    if (Etat.data.finances.ponderer) m += this.tendance().delta; // bonus/malus de croissance
+    return Math.max(2.5, Math.min(6, m));
+  },
+
+  /* Détail des retraitements de l'EBE (module 1). Renvoie les lignes et le total
+   * à réintégrer à l'EBE comptable pour obtenir l'EBE retraité. */
+  retraitementDetail() {
+    const r = Etat.data.retraitements;
+    if (!r.actif) return { total: 0, lignes: [] };
+    const lignes = [
+      { label: 'Rémunération dirigeant (vs marché)', montant: (Number(r.remunerationActuelle) || 0) - (Number(r.remunerationMarche) || 0) },
+      { label: 'Loyer des murs (vs marché)',         montant: (Number(r.loyerActuelMurs) || 0) - (Number(r.loyerMarcheMurs) || 0) },
+      { label: 'Charges exceptionnelles',            montant: (Number(r.chargesExcept) || 0) },
+      { label: 'Redevances de crédit-bail',          montant: (Number(r.creditBail) || 0) },
+    ].filter(l => l.montant !== 0);
+    const total = lignes.reduce((s, l) => s + l.montant, 0);
+    return { total, lignes };
+  },
+
   /* --- MÉTHODE 2 : Valeur par la Rentabilité (multiple de l'EBE retraité) -- */
   ebeRetraiteMoyen(exclureK) {
     const f = Etat.data.finances;
-    let ebe = this.moyenne(f.ebe) + (Number(f.retraitement) || 0);
+    let ebe = this.moyenneExercices(f.ebe) + this.retraitementDetail().total;
     if (exclureK) {
       // On retire la quote-part d'EBE attribuable au Kiosque (au prorata du CA).
       ebe = ebe * (1 - this.partKiosque());
@@ -261,10 +433,8 @@ const Calculs = {
   },
 
   valeurParRentabilite(exclureK) {
-    const f = Etat.data.finances;
     const ebe = this.ebeRetraiteMoyen(exclureK);
-    const multipleAjuste = (Number(f.multiple) || 4) * this.facteurMultiple(exclureK);
-    return Math.max(0, ebe * multipleAjuste);
+    return Math.max(0, ebe * this.multipleEffectif(exclureK));
   },
 
   // --- Valeur vénale du matériel (après vétusté) ----------------------------
@@ -303,18 +473,84 @@ const Calculs = {
     return this.valeurMateriel(exclureK) + this.valeurStock() + this.valeurDroitAuBail(exclureK);
   },
 
-  /* --- SYNTHÈSE : les 3 méthodes + la fourchette pondérée ------------------ */
+  /* --- MODULE 2/3 : Survaleur incorporelle & risque -----------------------
+   *  Cumule les points du questionnaire → prime (ou décote) en % appliquée à
+   *  la valeur finale. Indépendant du Kiosque (facteurs qualitatifs globaux). */
+  survaleurDetail() {
+    const s = Etat.data.survaleur;
+    if (!s.actif) return { pct: 0, points: 0, lignes: [] };
+    const lignes = [];
+    let points = 0;
+    CONFIG.facteursSurvaleur.forEach(fac => {
+      const opt = fac.options.find(o => o.val === s[fac.id]) || fac.options.find(o => o.pts === 0) || fac.options[0];
+      points += opt.pts;
+      lignes.push({ label: fac.label, choix: opt.label, pts: opt.pts });
+    });
+    // Conversion points → % borné. 1 point ≈ 1 %.
+    const { min, max } = CONFIG.survaleurBornes;
+    const pct = Math.max(min, Math.min(max, points / 100));
+    return { pct, points, lignes };
+  },
+
+  /* --- SYNTHÈSE : 3 méthodes + survaleur + fourchette pondérée ------------- */
   synthese(exclureK) {
     const ca = this.valeurParCA(exclureK);
     const renta = this.valeurParRentabilite(exclureK);
     const patri = this.valeurPatrimoniale(exclureK);
     const p = CONFIG.ponderation;
 
-    const mediane = ca * p.ca + renta * p.rentabilite + patri * p.patrimoniale;
+    const medianeBrute = ca * p.ca + renta * p.rentabilite + patri * p.patrimoniale;
+    const survaleurPct = this.survaleurDetail().pct;        // prime/décote incorporelle
+    const mediane = medianeBrute * (1 + survaleurPct);
     const basse = mediane * CONFIG.fourchette.basse;
     const haute = mediane * CONFIG.fourchette.haute;
 
-    return { ca, renta, patri, basse, mediane, haute };
+    return { ca, renta, patri, medianeBrute, survaleurPct, basse, mediane, haute };
+  },
+
+  /* --- MODULE 4 : Provision de renouvellement -----------------------------
+   *  Part du prix à neuf des matériels « en fin de vie » que le repreneur devra
+   *  réinvestir prochainement → déduite de la valeur de cession. */
+  provisionRenouvellement(exclureK) {
+    return Etat.data.materiel.reduce((tot, m) => {
+      if (exclureK && m.site === 'kiosque') return tot;
+      if (m.etat !== 'finVie') return tot;
+      return tot + (Number(m.prixNeuf) || 0) * CONFIG.provisionRenouvellement;
+    }, 0);
+  },
+
+  // Droits d'enregistrement sur cession de fonds (barème progressif par tranches)
+  droitsEnregistrement(valeur) {
+    return CONFIG.droitsEnregistrement.reduce((dr, t) => {
+      if (valeur <= t.de) return dr;
+      const assiette = Math.min(valeur, t.a) - t.de;
+      return dr + assiette * t.taux;
+    }, 0);
+  },
+
+  /* --- MODULE 4 : Cession & net vendeur ------------------------------------
+   *  Passage de la valeur de référence (médiane) au prix selon le type de
+   *  cession, après provision de renouvellement, + droits d'enregistrement. */
+  cession(exclureK) {
+    const c = Etat.data.cession;
+    const reference = this.synthese(exclureK).mediane;
+    const provision = this.provisionRenouvellement(exclureK);
+    const valeurFonds = Math.max(0, reference - provision);
+
+    const titres = c.type === 'titres';
+    const valeurTitres = titres
+      ? valeurFonds + (Number(c.tresorerie) || 0) - (Number(c.detteNette) || 0)
+      : null;
+
+    const prix = titres ? valeurTitres : valeurFonds;
+    const droits = this.droitsEnregistrement(valeurFonds); // assis sur le fonds
+    const stock = this.valeurStock();                       // facturé en sus
+
+    return {
+      type: c.type, reference, provision, valeurFonds, valeurTitres,
+      prix, droits, stock, regimeExo: c.regimeExo,
+      exoTexte: CONFIG.regimesExoneration[c.regimeExo] || '',
+    };
   },
 };
 
@@ -433,6 +669,11 @@ const UI = {
     $('#btn-prev').disabled = Etat.data.etapeCourante === 0;
     $('#btn-next').classList.toggle('invisible', Etat.data.etapeCourante === ETAPES.length - 1);
     this.rendreStepper();
+    // Rafraîchit les indicateurs « live » dépendant d'étapes précédentes
+    const nom = ETAPES[Etat.data.etapeCourante];
+    if (nom === 'Comptabilité') this.majTendance();
+    if (nom === 'Retraitements') this.majRetraitements();
+    if (nom === 'Survaleur') this.majSurvaleur();
     if (Etat.data.etapeCourante === ETAPES.length - 1) this.rendreRapport();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
@@ -518,23 +759,45 @@ const UI = {
       el.addEventListener('input', () => {
         Etat.data.finances[el.dataset.fin][Number(el.dataset.an)] = Number(el.value) || 0;
         Etat.sauver();
+        this.majTendance();
       });
     });
 
-    // Multiple EBE (slider) + retraitement
+    // Multiple EBE (slider)
     $('#multiple-ebe').value = Etat.data.finances.multiple;
     $('#multiple-ebe-val').textContent = Number(Etat.data.finances.multiple).toFixed(1);
-    $('#retraitement-ebe').value = Etat.data.finances.retraitement || '';
-
     $('#multiple-ebe').addEventListener('input', e => {
       Etat.data.finances.multiple = Number(e.target.value);
       $('#multiple-ebe-val').textContent = Number(e.target.value).toFixed(1);
       Etat.sauver();
     });
-    $('#retraitement-ebe').addEventListener('input', e => {
-      Etat.data.finances.retraitement = Number(e.target.value) || 0;
+
+    // Pondération des exercices (module Tendance)
+    const cb = $('#ponderer-exercices');
+    cb.checked = Etat.data.finances.ponderer;
+    cb.addEventListener('change', () => {
+      Etat.data.finances.ponderer = cb.checked;
       Etat.sauver();
+      this.majTendance();
     });
+    this.majTendance();
+  },
+
+  // Met à jour l'indicateur de tendance du CA (croissance / déclin)
+  majTendance() {
+    const el = $('#tendance-readout');
+    if (!el) return;
+    const t = Calculs.tendance();
+    if (t.g === null) {
+      el.innerHTML = '<span class="text-slate-400">Renseignez le CA des 3 exercices pour détecter la tendance.</span>';
+      return;
+    }
+    const signe = t.g >= 0 ? '+' : '';
+    const couleur = t.delta > 0 ? 'text-menthe-600' : (t.delta < 0 ? 'text-framboise-600' : 'text-slate-600');
+    const effet = Etat.data.finances.ponderer && t.delta !== 0
+      ? ` · multiple ${t.delta > 0 ? '+' : ''}${t.delta}` : '';
+    el.innerHTML = `<span class="font-semibold ${couleur}">${t.label}</span>
+      <span class="text-slate-500">(${signe}${(t.g * 100).toFixed(1)} %/an${effet})</span>`;
   },
 
   /* ---- ÉTAPE 3 : lignes de matériel -------------------------------------- */
@@ -634,7 +897,132 @@ const UI = {
     maj();
   },
 
-  /* ---- ÉTAPE 5 : rapport d'expert ---------------------------------------- */
+  /* ---- ÉTAPE 3 : retraitements de l'EBE ---------------------------------- */
+  rendreRetraitements() {
+    const r = Etat.data.retraitements;
+    const champs = {
+      'retr-rem-actuelle': 'remunerationActuelle',
+      'retr-rem-marche':   'remunerationMarche',
+      'retr-loyer-actuel': 'loyerActuelMurs',
+      'retr-loyer-marche': 'loyerMarcheMurs',
+      'retr-except':       'chargesExcept',
+      'retr-cb':           'creditBail',
+    };
+    Object.entries(champs).forEach(([id, cle]) => {
+      const el = $('#' + id);
+      el.value = r[cle] || '';
+      el.addEventListener('input', () => {
+        r[cle] = Number(el.value) || 0;
+        Etat.sauver();
+        this.majRetraitements();
+      });
+    });
+
+    const actif = $('#retr-actif');
+    actif.checked = r.actif;
+    actif.addEventListener('change', () => {
+      r.actif = actif.checked;
+      Etat.sauver();
+      this.majRetraitements();
+    });
+    this.majRetraitements();
+  },
+
+  majRetraitements() {
+    const r = Etat.data.retraitements;
+    $('#bloc-retraitements').style.opacity = r.actif ? '1' : '.45';
+    $('#bloc-retraitements').style.pointerEvents = r.actif ? 'auto' : 'none';
+    const det = Calculs.retraitementDetail();
+    $('#retr-ebe-total').textContent = euro(Calculs.ebeRetraiteMoyen(Etat.data.exclureKiosque));
+    const signe = det.total >= 0 ? '+' : '';
+    $('#retr-detail').textContent = r.actif
+      ? `EBE comptable moyen ${euro(Calculs.moyenneExercices(Etat.data.finances.ebe))} ${signe} retraitements ${euro(det.total)}.`
+      : 'Retraitements désactivés : l\'EBE comptable moyen est utilisé tel quel.';
+  },
+
+  /* ---- ÉTAPE 6 : survaleur incorporelle & risque ------------------------- */
+  rendreSurvaleur() {
+    const s = Etat.data.survaleur;
+    const grille = $('#grille-survaleur');
+    grille.innerHTML = '';
+    CONFIG.facteursSurvaleur.forEach(fac => {
+      const div = document.createElement('div');
+      div.className = 'bg-slate-50 rounded-xl p-4';
+      div.innerHTML = `
+        <label class="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1">${fac.label}
+          <span class="infobulle text-slate-400 text-xs">ⓘ<span class="bulle">${fac.aide}</span></span>
+        </label>
+        <select data-surv="${fac.id}" class="champ w-full">
+          ${fac.options.map(o =>
+            `<option value="${o.val}" ${s[fac.id] === o.val ? 'selected' : ''}>${o.label}</option>`).join('')}
+        </select>`;
+      grille.appendChild(div);
+    });
+    grille.querySelectorAll('[data-surv]').forEach(el => {
+      el.addEventListener('change', () => {
+        s[el.dataset.surv] = el.value;
+        Etat.sauver();
+        this.majSurvaleur();
+      });
+    });
+
+    const actif = $('#surv-actif');
+    actif.checked = s.actif;
+    actif.addEventListener('change', () => {
+      s.actif = actif.checked;
+      Etat.sauver();
+      this.majSurvaleur();
+    });
+    this.majSurvaleur();
+  },
+
+  majSurvaleur() {
+    const s = Etat.data.survaleur;
+    const grille = $('#grille-survaleur');
+    grille.style.opacity = s.actif ? '1' : '.45';
+    grille.style.pointerEvents = s.actif ? 'auto' : 'none';
+    const pct = Calculs.survaleurDetail().pct;
+    const bandeau = $('#surv-bandeau');
+    const positif = pct >= 0;
+    bandeau.className = 'mt-6 rounded-xl p-4 flex items-center justify-between text-white '
+      + (positif ? 'bg-menthe-600' : 'bg-framboise-600');
+    $('#surv-pct').textContent = (positif ? '+' : '') + (pct * 100).toFixed(1) + ' %';
+  },
+
+  /* ---- ÉTAPE 7 : paramètres de cession (statiques) ----------------------- */
+  bindCession() {
+    const c = Etat.data.cession;
+    const reRendre = () => { Etat.sauver(); this.majCessionUI(); this.rendreRapport(); };
+
+    $('#cess-actif').checked = c.actif;
+    $('#cess-actif').addEventListener('change', e => { c.actif = e.target.checked; reRendre(); });
+
+    $('#cess-type').value = c.type;
+    $('#cess-type').addEventListener('change', e => { c.type = e.target.value; reRendre(); });
+
+    $('#cess-exo').value = c.regimeExo;
+    $('#cess-exo').addEventListener('change', e => { c.regimeExo = e.target.value; reRendre(); });
+
+    $('#cess-tresorerie').value = c.tresorerie || '';
+    $('#cess-tresorerie').addEventListener('input', e => { c.tresorerie = Number(e.target.value) || 0; reRendre(); });
+
+    $('#cess-dette').value = c.detteNette || '';
+    $('#cess-dette').addEventListener('input', e => { c.detteNette = Number(e.target.value) || 0; reRendre(); });
+
+    this.majCessionUI();
+  },
+
+  // Affiche/masque les champs trésorerie & dette selon le type de cession + l'activation
+  majCessionUI() {
+    const c = Etat.data.cession;
+    const titres = c.type === 'titres';
+    $('#cess-tresorerie-wrap').classList.toggle('hidden', !titres);
+    $('#cess-dette-wrap').classList.toggle('hidden', !titres);
+    $('#bloc-cession').style.opacity = c.actif ? '1' : '.45';
+    $('#bloc-cession').style.pointerEvents = c.actif ? 'auto' : 'none';
+  },
+
+  /* ---- ÉTAPE 7 : rapport d'expert ---------------------------------------- */
   rendreRapport() {
     const exclu = Etat.data.exclureKiosque;
     const avec = Calculs.synthese(false);   // scénario AVEC Kiosque
@@ -664,6 +1052,55 @@ const UI = {
     const ecart = avec.mediane - sans.mediane;
     const ecartPct = avec.mediane > 0 ? (ecart / avec.mediane * 100) : 0;
 
+    // Données des modules complémentaires
+    const retr = Calculs.retraitementDetail();
+    const surv = Calculs.survaleurDetail();
+    const cess = Calculs.cession(exclu);
+    const t = Calculs.tendance();
+
+    // Détail « rentabilité » enrichi (EBE retraité + multiple effectif)
+    const detailRenta = `EBE retraité moyen ${euro(Calculs.ebeRetraiteMoyen(exclu))} × ${Calculs.multipleEffectif(exclu).toFixed(2)}`
+      + (retr.total !== 0 ? ` · dont retraitements ${retr.total >= 0 ? '+' : ''}${euro(retr.total)}` : '')
+      + ` · Pondération ${Math.round(CONFIG.ponderation.rentabilite*100)} %`;
+
+    // Ligne « survaleur » (affichée seulement si une prime/décote s'applique)
+    const survSigne = surv.pct >= 0 ? '+' : '';
+    const ligneSurvaleur = (Etat.data.survaleur.actif && surv.pct !== 0) ? `
+      <div class="flex items-center justify-between text-sm mb-3 px-1">
+        <span class="text-slate-500">Valeur brute des 3 méthodes : <strong>${euro(courant.medianeBrute)}</strong>
+          <span class="${surv.pct >= 0 ? 'text-menthe-600' : 'text-framboise-600'} font-semibold">(${survSigne}${(surv.pct*100).toFixed(1)} % survaleur incorporelle)</span>
+        </span>
+        <span class="font-semibold text-marine-800">→ ${euro(courant.mediane)}</span>
+      </div>` : '';
+
+    // Bloc « Cession & net vendeur » (module 4)
+    const blocCession = Etat.data.cession.actif ? `
+      <h3 class="text-sm uppercase tracking-wide font-bold text-slate-400 mb-2 mt-6">4 · Cession & net vendeur</h3>
+      <div class="bg-slate-50 rounded-xl p-4 mb-2 text-sm">
+        <div class="flex justify-between py-1"><span class="text-slate-500">Valeur de référence (médiane)</span><span class="font-semibold">${euro(cess.reference)}</span></div>
+        <div class="flex justify-between py-1"><span class="text-slate-500">− Provision de renouvellement (matériel en fin de vie)</span><span class="font-semibold text-framboise-600">− ${euro(cess.provision)}</span></div>
+        <div class="flex justify-between py-1 border-t border-slate-200 mt-1 pt-2">
+          <span class="font-semibold text-slate-700">= Valeur du fonds de commerce</span><span class="font-bold text-marine-800">${euro(cess.valeurFonds)}</span></div>
+        ${cess.type === 'titres' ? `
+          <div class="flex justify-between py-1 mt-1"><span class="text-slate-500">+ Trésorerie transmise</span><span class="font-semibold text-menthe-600">+ ${euro(Etat.data.cession.tresorerie)}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-500">− Dette nette restante</span><span class="font-semibold text-framboise-600">− ${euro(Etat.data.cession.detteNette)}</span></div>
+          <div class="flex justify-between py-1 border-t border-slate-200 mt-1 pt-2"><span class="font-semibold text-slate-700">= Valeur des titres (parts)</span><span class="font-bold text-marine-800">${euro(cess.valeurTitres)}</span></div>` : ''}
+      </div>
+      <div class="grid sm:grid-cols-2 gap-2 mb-2">
+        <div class="bg-marine-50 rounded-xl p-3 text-sm flex justify-between items-center">
+          <span class="text-slate-600">Stock facturé en sus</span><span class="font-bold text-marine-700">${euro(cess.stock)}</span>
+        </div>
+        <div class="bg-marine-50 rounded-xl p-3 text-sm flex justify-between items-center">
+          <span class="text-slate-600 flex items-center gap-1">Droits d'enregistrement
+            <span class="infobulle text-slate-400 text-xs">ⓘ<span class="bulle">Barème sur cession de fonds : 0 % jusqu'à 23 k€, 3 % de 23 k€ à 200 k€, 5 % au-delà. Normalement à la charge de l'acquéreur.</span></span>
+          </span><span class="font-bold text-marine-700">${euro(cess.droits)}</span>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        ⚖️ ${cess.type === 'titres' ? 'Cession des titres' : 'Vente du fonds de commerce'} · Plus-value : ${cess.exoTexte}
+        <br><span class="text-slate-400">Estimations indicatives — la fiscalité personnelle (impôt sur la plus-value) dépend de votre situation ; rapprochez-vous de votre expert-comptable.</span>
+      </p>` : '';
+
     $('#rapport').innerHTML = `
       <div class="flex items-start justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
         <div>
@@ -686,9 +1123,9 @@ const UI = {
           `Pondération finale : ${Math.round(CONFIG.ponderation.ca*100)} %`)}
         ${ligneMethode(
           'Valeur par la Rentabilité',
-          'Multiple de l\'EBE retraité moyen (×3 à ×5), ajusté selon la vétusté globale du matériel.',
+          'Multiple de l\'EBE retraité moyen (×3 à ×5), ajusté selon la vétusté du matériel et la tendance du CA.',
           courant.renta,
-          `EBE retraité moyen ${euro(Calculs.ebeRetraiteMoyen(exclu))} × ${(Number(Etat.data.finances.multiple)*Calculs.facteurMultiple(exclu)).toFixed(2)} · Pondération ${Math.round(CONFIG.ponderation.rentabilite*100)} %`)}
+          detailRenta)}
         ${ligneMethode(
           'Valeur Patrimoniale',
           'Actif tangible : matériel (valeur vénale après vétusté) + stock + droit au bail capitalisé.',
@@ -698,6 +1135,7 @@ const UI = {
 
       <!-- 2. Fourchette finale -->
       <h3 class="text-sm uppercase tracking-wide font-bold text-slate-400 mb-2">2 · Fourchette d'évaluation finale</h3>
+      ${ligneSurvaleur}
       <div class="grid grid-cols-3 gap-3 mb-6">
         <div class="text-center bg-slate-50 rounded-xl p-4">
           <p class="text-xs text-slate-400 mb-1">Basse</p>
@@ -733,10 +1171,13 @@ const UI = {
             sur la valeur médiane de l'entreprise.</span>
         </div>
       </div>
-      <p class="text-xs text-slate-400">
-        CA moyen 3 ans : ${euro(caGlobal)} (dont Kiosque ${euro(caKiosque)}, soit ${(Calculs.partKiosque()*100).toFixed(1)} %).
+
+      ${blocCession}
+
+      <p class="text-xs text-slate-400 mt-4">
+        CA moyen 3 ans : ${euro(caGlobal)} (dont Kiosque ${euro(caKiosque)}, soit ${(Calculs.partKiosque()*100).toFixed(1)} %)${t.g !== null ? ` · tendance ${t.label} (${t.g >= 0 ? '+' : ''}${(t.g*100).toFixed(1)} %/an)` : ''}.
         Méthode : pondération ${Math.round(CONFIG.ponderation.ca*100)}/${Math.round(CONFIG.ponderation.rentabilite*100)}/${Math.round(CONFIG.ponderation.patrimoniale*100)}
-        (CA / Rentabilité / Patrimoniale), fourchette ±${Math.round((1-CONFIG.fourchette.basse)*100)} %.
+        (CA / Rentabilité / Patrimoniale)${Etat.data.survaleur.actif && surv.pct !== 0 ? `, survaleur ${survSigne}${(surv.pct*100).toFixed(1)} %` : ''}, fourchette ±${Math.round((1-CONFIG.fourchette.basse)*100)} %.
       </p>`;
   },
 
@@ -794,8 +1235,11 @@ const UI = {
     // Rendu initial de toutes les sections
     this.rendreSites();
     this.rendreFinances();
+    this.rendreRetraitements();
     this.rendreMateriel();
     this.rendreStock();
+    this.rendreSurvaleur();
+    this.bindCession();
     this.allerEtape(Etat.data.etapeCourante);
   },
 };
