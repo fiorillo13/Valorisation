@@ -11,7 +11,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     // Configuration de la palette (tons clairs, sérieux et lisibles)
-    tailwind.config = {
+    // Garde-fou : si le CDN Tailwind est bloqué/lent, `tailwind` est absent.
+    // On évite alors une erreur bloquante (le fonctionnement de l'app n'en
+    // dépend pas — voir les règles CSS critiques dans la balise <style>).
+    if (typeof tailwind !== 'undefined') tailwind.config = {
       theme: {
         extend: {
           colors: {
@@ -32,6 +35,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
+    /* =====================================================================
+       RÈGLES CRITIQUES — indépendantes de Tailwind.
+       Garantissent le bon fonctionnement (bascule des étapes, affichage)
+       même si le CDN Tailwind est bloqué, lent ou absent (mode hors ligne,
+       ouverture en file://, aperçu sans réseau).
+       ===================================================================== */
+    .hidden    { display: none !important; }
+    .invisible { visibility: hidden !important; }
+
     /* ---- Infobulles personnalisées (terme technique + icône ?) ---- */
     .infobulle { position: relative; display: inline-flex; cursor: help; }
     .infobulle .bulle {
